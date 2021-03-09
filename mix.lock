@@ -1,0 +1,3 @@
+%{
+  "base58": {:hex, :base58, "0.1.1", "1e9d70b06850c81e2cc8f53d7331696b51f625fafbcac54078baa2d8e1ec7035", [:mix], [], "hexpm", "91a1ded9e39cf4117897c5de779f50d8a59e471e47d06c0bb1e853e549f380a5"},
+}
