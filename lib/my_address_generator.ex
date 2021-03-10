@@ -58,14 +58,14 @@ defmodule AddressGenerator do
   privkey = your private key
   type = :p2pkh | :p2sh
   ## Examples
-  
+
       iex(6)> AddressGenerator.address_valid?("3DGsfL9MKnqDdnqBTpEgm4MASWVZ4Bp2Cv", :p2sh)
       true
   """
-  def address_valid?(address, type) do 
-      with true <- length_valid?(address),
-           true <- (type == :p2pkh && String.first(address) == "1") || (type == :p2sh && String.first(address) == "3"),
-           do: decode_check_valid?(address)
+  def address_valid?(address, type) do
+    with true <- length_valid?(address),
+         true <- (type == :p2pkh && String.first(address) == "1") || (type == :p2sh && String.first(address) == "3"),
+         do: decode_check_valid?(address)
   end
 
   defp length_valid?(address) do
@@ -81,12 +81,12 @@ defmodule AddressGenerator do
   defp decode_check_valid?(address) do
     address_decode = Base58.decode(address)
     address_decode = add_zero_at_head(address_decode, 25 - byte_size(address_decode))
-    <<script_hash::binary-size(21), double_sha::binary>> = address_decode
-    <<double_sha_now::binary-size(4),_::binary>> = :crypto.hash(:sha256, :crypto.hash(:sha256, script_hash))
+    <<script_hash :: binary - size(21), double_sha :: binary>> = address_decode
+    <<double_sha_now :: binary - size(4), _ :: binary>> = :crypto.hash(:sha256, :crypto.hash(:sha256, script_hash))
     double_sha == double_sha_now
   end
 
-  defp add_zero_at_head(address_decode, count) when count<=1 do
+  defp add_zero_at_head(address_decode, count) when count <= 1 do
     if count == 0 do
       address_decode
     else
@@ -99,30 +99,41 @@ defmodule AddressGenerator do
   end
 
   defp generate_address_common(publickey, privkey, type) do
-    public_hash = double_hash(publickey)
-    
-    cond do 
+    cond do
       type == :p2pkh ->
-        {:ok, {privkey, p2pkh(public_hash)}}
+        address = publickey
+                  |> double_hash()
+                  |> p2pkh()
+
+        {:ok, {privkey, address}}
       type == :p2sh ->
-        {:ok, {privkey, p2sh(public_hash)}}
+        address = publickey
+                  |> double_hash()
+                  |> p2sh()
+
+        {:ok, {privkey, address}}
+      true ->
+        {:error, :invalid_type}
     end
   end
 
   defp double_hash(data) do
-    tmp = :crypto.hash(:sha256, data)
-    :crypto.hash(:ripemd160, tmp)
+    data
+    |> hash(:sha256)
+    |> hash(:ripemd160)
+  end
+
+  defp hash(data, type) do
+    :crypto.hash(type, data)
   end
 
   defp p2pkh(public_hash, version \\ <<0x00>>) do
-    Base58Check.encode(public_hash,version)
+    Base58Check.encode(public_hash, version)
   end
 
   defp p2sh(public_hash, version \\ <<0x05>>) do
-    op_num = <<0x00>>
-    bytes_num = <<0x14>>
-    script_hash = double_hash(op_num <> bytes_num <> public_hash)
-    Base58Check.encode(script_hash, version)
+    (<<0x00>> <> <<0x14>> <> public_hash)
+    |> double_hash
+    |> Base58Check.encode(version)
   end
-
 end
